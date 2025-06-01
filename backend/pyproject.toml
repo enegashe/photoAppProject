@@ -1,0 +1,7 @@
+[project]
+name = "ML_Photo_Editor_API"
+version = "0.1.0"
+description = "API For AI Powered Photo Editor"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
