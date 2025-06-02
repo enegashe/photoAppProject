@@ -11,7 +11,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def get_user(db: Session, user_email: EmailStr) -> Optional[User]:
     """Fetch a user by their email."""
     return db.query(User).filter(User.email == user_email).first()
-
+def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
+    """Fetch a user by their ID."""
+    return db.query(User).filter(User.id == user_id).first()
 def create_user(db: Session, user: UserCreate) -> User:
     encryptedPassword = pwd_context.hash(user.password) # Encrypt the password using pbkdf2_sha256
     user = User(email=user.email, hashed_password=encryptedPassword) # Create a new User instance with the provided email and encrypted password

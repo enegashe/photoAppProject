@@ -1,0 +1,80 @@
+---
+# 1) Deployment for FastAPI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: photoapp-deployment
+  labels:
+    app: photoapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: photoapp
+  template:
+    metadata:
+      labels:
+        app: photoapp
+    spec:
+      containers:
+        - name: photoapp-container
+          image: my-photoapp:v1       # local image
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: photoapp-env
+
+---
+# 2) Service to expose FastAPI (ClusterIP for internal, LoadBalancer or NodePort to expose externally)
+apiVersion: v1
+kind: Service
+metadata:
+  name: photoapp-service
+spec:
+  selector:
+    app: photoapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: LoadBalancer
+
+---
+# 3) Redis Deployment + Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: photoapp-redis
+  labels:
+    app: photoapp-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: photoapp-redis
+  template:
+    metadata:
+      labels:
+        app: photoapp-redis
+    spec:
+      containers:
+        - name: redis-container
+          image: redis:latest
+          ports:
+            - containerPort: 6379
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: photoapp-redis
+spec:
+  selector:
+    app: photoapp-redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+  type: ClusterIP

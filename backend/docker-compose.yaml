@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:latest
+    container_name: redis-server
+    ports:
+      - "6379:6379"
+
+  api:
+    image: my-photoapp:latest           
+    container_name: photoapp-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - redis
+    env_file:
+      - .env    
+    ports:
+      - "8000:8000"

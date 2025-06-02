@@ -32,3 +32,6 @@ db.sqlite3
 # OS files
 .DS_Store
 
+.ps1
+.txt
+

@@ -1,29 +1,44 @@
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi import Depends
+from jose import JWTError, jwt
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+
+from app.core.config import SECRET_KEY, ALGORITHM
+from app.crud.user import get_user_by_id
+from app.models.user import RefreshToken
 from app.db import get_db
-from jose import jwt
-from app.models.user import User  # Import the User model
-from app.crud.user import get_user  # Import the get_user function to fetch user details
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login") # This sets the token URL for OAuth2 password flow
-
-"""
-Dependency to get the current user based on the provided token.
-This function will be used in routes that require authentication.
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+""" Below is the code for getting the current user from the access token.
+This function decodes the JWT token, checks its validity, and retrieves the user from the database.
 Field Descriptions:
-- `token`: The OAuth2 token provided by the user, extracted using the `oauth2_scheme`.
+- `token`: The JWT access token provided by the user.
 - `db`: A database session dependency that provides access to the database.
-
 Returns:
-- The user object if the token is valid and the user exists, otherwise returns None.
+- The user object if the token is valid and the user exists in the database.
 """
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    decoded = jwt.decode(token, options={"verify_signature": False})  # Decode the token without verifying the signature
-    decoded_user_id = decoded["sub"]  # Extract the user ID from the token
-    if decoded_user_id is not None:
-        user = get_user(db, decoded_user_id)
-        if user:
-            return user  # Return the user if found
-    return None
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        raise credentials_exception
+
+    # 1) Check token type
+    if payload.get("type") != "access":
+        raise credentials_exception
+
+    user_id: str = payload.get("sub")
+    if user_id is None:
+        raise credentials_exception
+
+    # 2) Look up the user from DB
+    user = get_user_by_id(db, user_id)
+    if user is None:
+        raise credentials_exception
+
+    return user

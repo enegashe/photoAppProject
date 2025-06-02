@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import routers (they can be empty stubs for now)
-from routers import auth, images, edits, history
+from app.routers import auth, images, edits, history
+from fastapi_limiter import FastAPILimiter
+from app.core.config import REDIS_URL
+import redis.asyncio as aioredis
 
 # Import database initialization / event handlers
 from app import db, core
@@ -24,19 +26,18 @@ app.add_middleware(
 # Each router file defines an APIRouter() and some path operations
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(images.router, prefix="/images", tags=["images"])
-app.include_router(edits.router, prefix="/edits", tags=["edits"])
-app.include_router(history.router, prefix="/history", tags=["history"])
+#app.include_router(edits.router, prefix="/edits", tags=["edits"])
+#app.include_router(history.router, prefix="/history", tags=["history"])
 
 # Startup event: create tables or connect to any services
 @app.on_event("startup")
 async def startup_event():
+    # Initialize the database
+    db.init_db()
+    redis = aioredis.from_url(REDIS_URL, encoding="utf-8", decode_responses=True)
+    await FastAPILimiter.init(redis)
     pass
 
-# Shutdown event: close DB connections, or cleanup
-@app.on_event("shutdown")
-async def shutdown_event():
-    # Any cleanup if needed
-    pass
 
 # Root endpoint for health check
 @app.get("/")
